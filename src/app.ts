@@ -8,7 +8,7 @@ const app: Application = expressWs(express(), undefined, {
   wsOptions: { clientTracking: true },
 }).app;
 
-const port: number = 3001;
+const port = Number(process.env.PORT ?? 3001);
 
 let wsConnections: Record<string, ws> = {};
 
