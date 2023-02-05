@@ -125,6 +125,10 @@ app.ws("/ws", (ws, req) => {
   }
 });
 
+app.get("/", (req, res) => {
+  res.json("coucou");
+});
+
 app.listen(port, function () {
   console.log(`App is listening on port ${port} !`);
 });
