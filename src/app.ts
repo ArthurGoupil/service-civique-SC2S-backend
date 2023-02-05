@@ -42,6 +42,9 @@ app.get("/missions", async (req, res) => {
     { header: "Publics bénéficiaires", key: "public", width: 32 },
   ];
 
+  res.json("Launching background requests...");
+  res.end();
+
   let missionsCount = 0;
 
   if (req.query.wsClientId) {
@@ -66,10 +69,10 @@ app.get("/missions", async (req, res) => {
         edge.node.status === "published"
       ) {
         row.getCell(1).value = edge.node.title;
-        row.getCell(2).value = edge.node.organization.name;
+        row.getCell(2).value = edge.node.organization?.name;
         row.getCell(3).value = edge.node.startDate;
-        row.getCell(4).value = edge.node.interventionPlace.city;
-        row.getCell(5).value = edge.node.interventionPlace.zip;
+        row.getCell(4).value = edge.node?.interventionPlace?.city;
+        row.getCell(5).value = edge.node.interventionPlace?.zip;
 
         const missionResponse = await axios.get(
           `https://www.service-civique.gouv.fr/api/api/rest/missions/${edge.node.id}`
@@ -89,8 +92,9 @@ app.get("/missions", async (req, res) => {
           9
         ).value = `https://www.service-civique.gouv.fr/trouver-ma-mission/${edge.node.slug}-${edge.node.id}`;
 
-        row.getCell(10).value =
-          missionResponse.data.publicBeneficiaries.join(",");
+        row.getCell(10).value = missionResponse.data.publicBeneficiaries
+          ? missionResponse.data.publicBeneficiaries.join(",")
+          : "";
 
         missionsCount++;
         if (req.query.wsClientId) {
@@ -107,11 +111,17 @@ app.get("/missions", async (req, res) => {
 
     const buffer = await workbook.xlsx.writeBuffer();
 
-    res.write(buffer);
-    res.end();
+    if (req.query.wsClientId) {
+      wsConnections[req.query.wsClientId.toString()].send(buffer);
+    }
   } catch (error) {
     const axiosError = error as AxiosError;
     console.error("error", axiosError);
+    if (req.query.wsClientId) {
+      wsConnections[req.query.wsClientId.toString()].send(
+        `${axiosError.code} ${axiosError.message}`
+      );
+    }
     res
       .status(Number(axiosError.code))
       .send(`${axiosError.code} ${axiosError.message}`);
